@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación de Estrategia - Fórmula 1</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #1a1a1a; /* Fondo oscuro */
+            color: #fff;
+            margin: 0;
+            flex-direction: column;
+            text-align: center;
+        }
+        #gameContainer {
+            width: 80%;
+            max-width: 700px;
+            background-color: #2a2a2a; /* Fondo semitransparente oscuro */
+            border: 2px solid #ff1a1a; /* Borde rojo */
+            padding: 20px;
+            border-radius: 8px;
+            overflow-y: auto;
+            max-height: 90vh;
+        }
+        h1 {
+            color: #ff1a1a; /* Título en rojo */
+        }
+        button {
+            background-color: #ff1a1a; /* Botón rojo */
+            color: #fff;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .race-info {
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 12px; /* Tamaño de fuente más pequeño para la tabla */
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+            text-align: center;
+            padding: 3px; /* Relleno reducido */
+        }
+        th {
+            background-color: #444;
+            color: #ff1a1a;
+        }
+        td {
+            background-color: #555;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #ff1a1a;
+        }
+        footer a {
+            color: #ff1a1a;
+            text-decoration: none;
+        }
+        .driving-style {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 15px; /* Espacio entre círculos */
+            flex-direction: column;
+        }
+        .style-circle {
+            width: 30px; /* Círculo más pequeño */
+            height: 30px; /* Círculo más pequeño */
+            border: 2px solid #ff1a1a;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .style-circle.selected {
+            background-color: #ff1a1a; /* Color al seleccionar */
+        }
+        .style-label {
+            font-size: 12px; /* Tamaño de fuente para las etiquetas */
+            margin-top: 5px; /* Espacio entre el círculo y la etiqueta */
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <h1>Simulación de Estrategia - Fórmula 1</h1>
+        <p>Selecciona tu piloto y la estrategia de neumáticos para cada vuelta.</p>
+        <div>
+            <label for="driverSelect">Selecciona tu piloto:</label>
+            <select id="driverSelect">
+                <option value="" disabled selected>Elige un piloto</option>
+            </select>
+        </div>
+
+        <div id="tireSelectionContainer" style="display: none;">
+            <label for="tireSelect">Selecciona tipo de neumático:</label>
+            <select id="tireSelect">
+                <option value="blando">Blando</option>
+                <option value="medio">Medio</option>
+                <option value="duro">Duro</option>
+            </select>
+        </div>
+
+        <button id="goToRaceButton" onclick="goToRace()">Ir a carrera</button>
+
+        <div class="driving-style" id="drivingStyleContainer" style="display: none;">
+            <label>Estilo de conducción:</label>
+            <div class="style-circle" onclick="setDrivingStyle('normal')">
+                <span class="style-label">Normal</span>
+            </div>
+            <div class="style-circle" onclick="setDrivingStyle('conservar')">
+                <span class="style-label">Conservar</span>
+            </div>
+            <div class="style-circle" onclick="setDrivingStyle('atacar')">
+                <span class="style-label">Atacar</span>
+            </div>
+        </div>
+
+        <button id="startRaceButton" onclick="startRace()" style="display:none;">Empezar Carrera</button>
+
+        <div class="race-info" id="raceInfo"></div>
+        <button id="pitStopButton" onclick="makePitStop()" style="display:none;">Ir a Boxes</button>
+        <div id="lapDetails"></div>
+    </div>
+
+    <footer>
+        Desarrollado por <strong>Fórmula Actualidad</strong> |
+        <a href="https://www.youtube.com/@FormulaActualidad" target="_blank">Visita nuestro canal de YouTube</a>
+    </footer>
+
+    <script>
+        const drivers = [
+            { name: "Max Verstappen", skill: 95 },
+            { name: "Lewis Hamilton", skill: 93 },
+            { name: "Charles Leclerc", skill: 90 },
+            { name: "Lando Norris", skill: 88 },
+            { name: "Sergio Pérez", skill: 89 },
+            { name: "Carlos Sainz", skill: 87 },
+            { name: "George Russell", skill: 89 },
+            { name: "Fernando Alonso", skill: 91 },
+            { name: "Pierre Gasly", skill: 86 },
+            { name: "Esteban Ocon", skill: 85 },
+            { name: "Oscar Piastri", skill: 84 },
+            { name: "Lance Stroll", skill: 80 },
+            { name: "Alexander Albon", skill: 82 },
+            { name: "Franco Colapinto", skill: 84 },
+            { name: "Kevin Magnussen", skill: 81 },
+            { name: "Nico Hülkenberg", skill: 81 },
+            { name: "Zhou Guanyu", skill: 79 },
+            { name: "Valtteri Bottas", skill: 83 },
+            { name: "Yuki Tsunoda", skill: 82 },
+            { name: "Liam Lawson", skill: 83 }
+        ];
+
+        const totalLaps = 56; // Número de vueltas
+        let player;
+        let playerTire;
+        let playerTireUsage = 100;
+        let lap = 1;
+        let raceOngoing = false; // Iniciar como no en carrera
+        let otherDrivers = [];
+        let drivingStyle = 'normal'; // Estilo de conducción por defecto
+
+        const driverSelect = document.getElementById("driverSelect");
+        drivers.forEach(driver => {
+            const option = document.createElement("option");
+            option.value = driver.name;
+            option.textContent = driver.name + " (Habilidad: " + driver.skill + ")";
+            driverSelect.appendChild(option);
+        });
+
+        function goToRace() {
+            const selectedDriverName = driverSelect.value;
+
+            if (!selectedDriverName) {
+                alert("Por favor, selecciona un piloto.");
+                return;
+            }
+
+            player = drivers.find(driver => driver.name === selectedDriverName);
+            player.time = 0;
+            player.pitStops = 0;
+            playerTireUsage = 100;
+            lap = 1;
+            raceOngoing = false; // Asegúrate de que la carrera no esté en curso al ir a la carrera
+
+            otherDrivers = drivers
+                .filter(driver => driver.name !== selectedDriverName)
+                .map(driver => ({
+                    ...driver,
+                    time: 0,
+                    tireUsage: 100,
+                    pitStops: 0 // Agregando contador de paradas a otros pilotos
+                }));
+
+            document.getElementById("raceInfo").innerHTML = `Piloto seleccionado: ${selectedDriverName}`;
+            document.getElementById("tireSelectionContainer").style.display = "block"; // Muestra la selección de neumáticos
+            document.getElementById("goToRaceButton").style.display = "none"; // Oculta el botón "Ir a carrera"
+            document.getElementById("drivingStyleContainer").style.display = "flex"; // Muestra el contenedor de estilos de conducción
+            document.getElementById("startRaceButton").style.display = "block"; // Muestra el botón "Empezar carrera" tras seleccionar neumático
+        }
+
+        function setDrivingStyle(style) {
+            drivingStyle = style;
+
+            // Resaltar el círculo seleccionado
+            const circles = document.querySelectorAll('.style-circle');
+            circles.forEach(circle => {
+                circle.classList.remove('selected'); // Elimina la clase de seleccionado de todos los círculos
+            });
+            const selectedCircle = Array.from(circles).find(circle => circle.textContent.trim() === style);
+            selectedCircle.classList.add('selected'); // Agrega clase de seleccionado
+            displayDrivingStyle();
+        }
+
+        function displayDrivingStyle() {
+            document.querySelectorAll('.style-circle').forEach(circle => {
+                const label = circle.querySelector('.style-label');
+                if (circle.classList.contains('selected')) {
+                    label.style.fontWeight = 'bold'; // Resaltar la etiqueta del estilo seleccionado
+                } else {
+                    label.style.fontWeight = 'normal'; // Normalizar las demás etiquetas
+                }
+            });
+        }
+
+        function startRace() {
+            raceOngoing = true;
+            playerTire = document.getElementById("tireSelect").value; // Obtener neumático seleccionado
+            document.getElementById("startRaceButton").style.display = "none"; // Oculta el botón "Empezar carrera"
+            document.getElementById("pitStopButton").style.display = "block"; // Muestra el botón de boxes
+            nextLap(); // Comienza la carrera
+        }
+
+        function nextLap() {
+            if (!raceOngoing) return;
+
+            let baseLapTime = 85 + (100 - player.skill) * 0.3 + Math.random() * 2; // Ajustar tiempo base
+            let speedModifier = 0; // Sin modificación de velocidad
+            let degradation = 3; // Degradación normal
+
+            // Ajustar degradación y velocidad según el estilo de conducción
+            if (drivingStyle === 'conservar') {
+                degradation = 2; // Menos degradación
+                speedModifier = -0.25; // Más lento
+            } else if (drivingStyle === 'atacar') {
+                degradation = 4; // Mayor degradación
+                speedModifier = 0.25; // Más rápido
+            }
+
+            // Calcular tiempo del jugador
+            player.time += baseLapTime + speedModifier + (Math.random() * 2); // Tiempo con modificador
+            playerTireUsage -= degradation; // Degradación del neumático
+
+            if (playerTireUsage < 0) playerTireUsage = 0; // Asegurar que no se pase de 0
+            if (playerTireUsage < 10) player.time += 3; // Penalización si el neumático está muy desgastado
+
+            // Actualizar otros pilotos
+            updateOtherDrivers(baseLapTime + speedModifier);
+
+            // Actualizar resultados de la vuelta
+            displayLapResults();
+            lap++;
+
+            // Comprobar si continuar con la siguiente vuelta
+            if (lap <= totalLaps) {
+                setTimeout(nextLap, 2000); // Tiempo entre vueltas
+            } else {
+                endRace();
+            }
+        }
+
+        function updateOtherDrivers(currentLapTime) {
+            otherDrivers.forEach(driver => {
+                // Comprobar si el piloto necesita entrar en boxes
+                if (driver.tireUsage <= 30 && driver.tireUsage > 5) {
+                    driver.tireUsage = 100; // Restablecer el uso al 100% al cambiar neumáticos
+                    driver.time += 20; // Penalización de tiempo por entrar en boxes
+                } else if (driver.tireUsage > 0) {
+                    let baseLapTime = 85 + (100 - driver.skill) * 0.3 + Math.random() * 2; // Ajustar tiempo de vuelta de otros pilotos
+                    driver.time += baseLapTime + (Math.random() * 2); // Más tiempo para otros pilotos con algo de variabilidad
+                    driver.tireUsage -= (driver.tireUsage < 10 ? 5 : 3); // Degradación
+                }
+
+                if (driver.tireUsage < 0) driver.tireUsage = 0; // Asegurar que no se pase de 0
+                // Penalización si el neumático está muy desgastado
+                if (driver.tireUsage < 10) driver.time += 3; 
+            });
+        }
+
+        function displayLapResults() {
+            const sortedDrivers = [player, ...otherDrivers].sort((a, b) => a.time - b.time);
+            let raceTable = "<h3>Resultados de la vuelta " + lap + "</h3><table><tr><th>Piloto</th><th>Tiempo (s)</th><th>Distancia (s)</th><th>Neumático</th><th>Uso de Neumático (%)</th></tr>";
+
+            sortedDrivers.forEach(driver => {
+                const tireModifier = 1 - (driver.tireUsage / 100) * 0.01; // Modificador de tiempo según el uso de neumático
+                const actualLapTime = driver.time + (driver.tireUsage < 100 ? (driver.tireUsage < 10 ? 3 : 0) : 0) - (tireModifier * 2); // Penalización por desgaste
+                raceTable += `
+                    <tr>
+                        <td>${driver.name}</td>
+                        <td>${actualLapTime.toFixed(2)}</td>
+                        <td>${(actualLapTime - sortedDrivers[0].time).toFixed(2)}</td>
+                        <td>${driver === player ? playerTire : "medio"}</td>
+                        <td>${driver === player ? playerTireUsage.toFixed(0) : driver.tireUsage.toFixed(0)}%</td>
+                    </tr>
+                `;
+            });
+
+            raceTable += "</table>";
+            document.getElementById("lapDetails").innerHTML = raceTable; // Actualiza la tabla después de cada vuelta
+        }
+
+        function makePitStop() {
+            if (!raceOngoing) return;
+
+            // Penalización de tiempo por entrar en boxes
+            player.time += 20; 
+            player.pitStops++;
+            playerTireUsage = 100; // Restablecer uso al 100% al cambiar neumáticos
+            document.getElementById("pitStopButton").style.display = "none";
+            updateOtherDrivers(0); // Actualiza a los demás pilotos después de la parada en boxes
+        }
+
+        function endRace() {
+            raceOngoing = false;
+            document.getElementById("pitStopButton").style.display = "none";
+            document.getElementById("raceInfo").innerHTML += "<br>¡Carrera finalizada!";
+        }
+    </script>
+</body>
+</html>
